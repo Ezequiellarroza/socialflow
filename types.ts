@@ -1,3 +1,34 @@
+// =====================================================
+// SOCIALFLOW - Types
+// =====================================================
+
+// =====================================================
+// AUTH TYPES
+// =====================================================
+
+export type UserType = 'agencia' | 'cliente' | 'super_admin';
+export type UserRole = 'admin' | 'editor' | 'viewer' | 'cliente' | 'super_admin';
+
+export interface AuthUser {
+  id: number;
+  email: string;
+  nombre: string;
+  user_type: UserType;
+  rol: UserRole;
+  agencia_id: number | null;
+  slug?: string;      // AGREGAR
+  logo_url?: string;  // AGREGAR (ya viene pero no estaba tipado)
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+  user_type?: UserType;
+}
+
+// =====================================================
+// POST TYPES
+// =====================================================
 
 export enum PostStatus {
   DRAFT = 'DRAFT',
@@ -13,15 +44,6 @@ export enum PostFormat {
   VIDEO = 'VIDEO'
 }
 
-export interface Client {
-  id: string;
-  name: string;
-  industry: string;
-  logo: string;
-  status: 'active' | 'pending' | 'urgent';
-  pendingPosts: number;
-}
-
 export interface Post {
   id: string;
   clientId: string;
@@ -35,6 +57,23 @@ export interface Post {
   hashtags?: string[];
   feedback?: string;
 }
+
+// =====================================================
+// CLIENT TYPES
+// =====================================================
+
+export interface Client {
+  id: string;
+  name: string;
+  industry: string;
+  logo: string;
+  status: 'active' | 'pending' | 'urgent';
+  pendingPosts: number;
+}
+
+// =====================================================
+// USER TYPES (Legacy - para UI)
+// =====================================================
 
 export interface User {
   name: string;

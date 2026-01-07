@@ -115,7 +115,7 @@ const SettingsPage: React.FC = () => {
           {activeTab === 'facturacion' && (
             <div className="flex flex-col gap-8 animate-fade-in">
               <h3 className="text-white text-xl font-bold">Plan Actual</h3>
-              <div className="p-6 bg-gradient-to-br from-primary/10 to-indigo-500/10 border border-primary/30 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="p-6 bg-linear-to-br from-primary/10 to-indigo-500/10 border border-primary/30 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6">
                 <div>
                    <h4 className="text-white text-2xl font-black mb-1">Plan Profesional</h4>
                    <p className="text-[#9da8b9] text-sm">Facturado mensualmente ($79.00 USD)</p>

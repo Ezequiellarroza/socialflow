@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+/* Custom styles */
+.scrollbar-hide::-webkit-scrollbar { 
+  display: none; 
+}
+
+.scrollbar-hide { 
+  -ms-overflow-style: none; 
+  scrollbar-width: none; 
+}
+
+/* Custom theme */
+@theme {
+  --color-primary: #136dec;
+  --color-background-light: #f6f7f8;
+  --color-background-dark: #101822;
+  --color-surface-dark: #1a222d;
+  --color-border-dark: #282f39;
+  --font-display: "Manrope", sans-serif;
+  --font-body: "Noto Sans", sans-serif;
+}
+
+body {
+  font-family: var(--font-display);
+  background-color: var(--color-background-dark);
+  color: white;
+}
