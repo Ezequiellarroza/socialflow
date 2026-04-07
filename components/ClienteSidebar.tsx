@@ -6,8 +6,14 @@ import React from 'react';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useBranding } from '../context/BrandingContext';
+import logo from '../assets/logo.webp';
 
-const ClienteSidebar: React.FC = () => {
+interface ClienteSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const ClienteSidebar: React.FC<ClienteSidebarProps> = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
   const { branding } = useBranding();
   const { slug } = useParams<{ slug: string }>();
@@ -32,7 +38,18 @@ const ClienteSidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 h-full w-64 bg-[#0d1117] border-r border-white/5 flex flex-col z-40">
+    <>
+      {/* Backdrop mobile */}
+      {isOpen && (
+        <button
+          type="button"
+          aria-label="Cerrar menu"
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside className={`fixed left-0 top-0 h-full w-64 bg-[#0d1117] border-r border-white/5 flex flex-col z-40 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}>
       {/* Logo de la Agencia */}
       <div className="h-20 flex items-center gap-3 px-6 border-b border-white/5">
         {branding.logo_url ? (
@@ -42,15 +59,7 @@ const ClienteSidebar: React.FC = () => {
             className="h-10 w-auto object-contain"
           />
         ) : (
-          <div 
-            className="rounded-xl size-10 flex items-center justify-center text-white font-bold shadow-lg"
-            style={{ 
-              backgroundColor: primaryColor,
-              boxShadow: `0 4px 20px -4px ${primaryColor}40`
-            }}
-          >
-            <span className="material-symbols-outlined">layers</span>
-          </div>
+          <img src={logo} alt="SocialFlow" className="size-10 rounded-xl bg-primary p-1.5 shadow-lg shadow-primary/10" />
         )}
         <div className="flex flex-col">
           <span className="text-white font-bold text-sm">{branding.nombre}</span>
@@ -64,6 +73,7 @@ const ClienteSidebar: React.FC = () => {
           <NavLink
             key={item.to}
             to={item.to}
+            onClick={onClose}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                 isActive
@@ -71,9 +81,9 @@ const ClienteSidebar: React.FC = () => {
                   : 'text-slate-400 hover:bg-white/5 hover:text-white'
               }`
             }
-            style={({ isActive }) => 
-              isActive 
-                ? { backgroundColor: `${primaryColor}20`, color: primaryColor } 
+            style={({ isActive }) =>
+              isActive
+                ? { backgroundColor: `${primaryColor}20`, color: primaryColor }
                 : {}
             }
           >
@@ -106,6 +116,7 @@ const ClienteSidebar: React.FC = () => {
         </button>
       </div>
     </aside>
+    </>
   );
 };
 

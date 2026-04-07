@@ -3,7 +3,7 @@
  * Servicios para el panel de Super Admin
  */
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://socialflow.com.ar/api';
+import { api } from './api';
 
 // ============ ESTADÍSTICAS ============
 export interface AdminStats {
@@ -30,10 +30,8 @@ export interface AdminStats {
 }
 
 export const getStats = async (): Promise<AdminStats> => {
-  const res = await fetch(`${API_URL}/admin/stats.php`, { credentials: 'include' });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Error al obtener estadísticas');
-  return json.data;
+  const response = await api.get<AdminStats>('/admin/stats.php');
+  return response.data!;
 };
 
 // ============ AGENCIAS ============
@@ -56,28 +54,17 @@ export interface Agencia {
 }
 
 export const getAgencias = async (): Promise<Agencia[]> => {
-  const res = await fetch(`${API_URL}/admin/agencias.php`, { credentials: 'include' });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Error al obtener agencias');
-  return json.data;
+  const response = await api.get<Agencia[]>('/admin/agencias.php');
+  return response.data!;
 };
 
 export const getAgencia = async (id: number): Promise<Agencia> => {
-  const res = await fetch(`${API_URL}/admin/agencias.php?id=${id}`, { credentials: 'include' });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Error al obtener agencia');
-  return json.data;
+  const response = await api.get<Agencia>(`/admin/agencias.php?id=${id}`);
+  return response.data!;
 };
 
 export const updateAgencia = async (id: number, data: Partial<Agencia>): Promise<void> => {
-  const res = await fetch(`${API_URL}/admin/agencias.php?id=${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(data)
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Error al actualizar agencia');
+  await api.put(`/admin/agencias.php?id=${id}`, data);
 };
 
 // ============ PAGOS ============
@@ -97,17 +84,15 @@ export interface Pago {
 }
 
 export const getPagos = async (filtros?: { agencia_id?: number; estado?: string }): Promise<Pago[]> => {
-  let url = `${API_URL}/admin/pagos.php`;
+  let endpoint = '/admin/pagos.php';
   if (filtros) {
     const params = new URLSearchParams();
     if (filtros.agencia_id) params.append('agencia_id', String(filtros.agencia_id));
     if (filtros.estado) params.append('estado', filtros.estado);
-    if (params.toString()) url += `?${params.toString()}`;
+    if (params.toString()) endpoint += `?${params.toString()}`;
   }
-  const res = await fetch(url, { credentials: 'include' });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Error al obtener pagos');
-  return json.data;
+  const response = await api.get<Pago[]>(endpoint);
+  return response.data!;
 };
 
 export const createPago = async (data: {
@@ -120,26 +105,12 @@ export const createPago = async (data: {
   referencia?: string;
   notas?: string;
 }): Promise<number> => {
-  const res = await fetch(`${API_URL}/admin/pagos.php`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(data)
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Error al crear pago');
-  return json.data.id;
+  const response = await api.post<{ id: number }>('/admin/pagos.php', data);
+  return response.data!.id;
 };
 
 export const updatePago = async (id: number, data: Partial<Pago>): Promise<void> => {
-  const res = await fetch(`${API_URL}/admin/pagos.php?id=${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(data)
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.message || 'Error al actualizar pago');
+  await api.put(`/admin/pagos.php?id=${id}`, data);
 };
 
 export const adminService = {

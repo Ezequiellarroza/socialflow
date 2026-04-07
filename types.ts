@@ -9,6 +9,16 @@
 export type UserType = 'agencia' | 'cliente' | 'super_admin';
 export type UserRole = 'admin' | 'editor' | 'viewer' | 'cliente' | 'super_admin';
 
+export interface PlanLimits {
+  max_clientes: number;
+  max_publicaciones_mes: number;
+}
+
+export interface PlanUsage {
+  clientes: number;
+  publicaciones_mes: number;
+}
+
 export interface AuthUser {
   id: number;
   email: string;
@@ -16,46 +26,20 @@ export interface AuthUser {
   user_type: UserType;
   rol: UserRole;
   agencia_id: number | null;
-  slug?: string;      // AGREGAR
-  logo_url?: string;  // AGREGAR (ya viene pero no estaba tipado)
+  slug?: string;
+  logo_url?: string;
+  empresa?: string;
+  plan?: string;
+  plan_limits?: PlanLimits;
+  plan_usage?: PlanUsage;
+  pendientes_aprobacion?: number;
+  requieren_modificacion?: number;
 }
 
 export interface LoginCredentials {
   email: string;
   password: string;
   user_type?: UserType;
-}
-
-// =====================================================
-// POST TYPES
-// =====================================================
-
-export enum PostStatus {
-  DRAFT = 'DRAFT',
-  PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-  SCHEDULED = 'SCHEDULED'
-}
-
-export enum PostFormat {
-  IMAGE = 'IMAGE',
-  CAROUSEL = 'CAROUSEL',
-  VIDEO = 'VIDEO'
-}
-
-export interface Post {
-  id: string;
-  clientId: string;
-  title: string;
-  content: string;
-  status: PostStatus;
-  format: PostFormat;
-  date: string;
-  time: string;
-  image?: string;
-  hashtags?: string[];
-  feedback?: string;
 }
 
 // =====================================================

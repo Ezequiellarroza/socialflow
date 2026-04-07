@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { calendariosService, CalendarioAPI } from '../services/calendarios';
 import { publicacionesService, PublicacionAPI, RedSocial, EstadoPublicacion } from '../services/publicaciones';
 import { clientesService, ClienteAPI } from '../services/clientes';
-import PublicacionModal from '../components/PublicacionModal';
 import CrearCalendarioModal from '../components/CrearCalendarioModal';
 import CrearPublicacionModal from '../components/CrearPublicacionModal';
 
@@ -20,8 +20,6 @@ const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 const ICONOS_RED: Record<RedSocial, string> = {
   instagram: 'photo_camera',
   facebook: 'public',
-  twitter: 'tag',
-  linkedin: 'work',
   tiktok: 'play_circle'
 };
 
@@ -45,6 +43,8 @@ function getFirstDayOfMonth(year: number, month: number): number {
 // =====================================================
 
 const CalendarView: React.FC = () => {
+  const navigate = useNavigate();
+
   // Estado de navegación
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -61,8 +61,6 @@ const CalendarView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   // Estado de modales
-  const [selectedPublicacion, setSelectedPublicacion] = useState<PublicacionAPI | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCrearCalendarioOpen, setIsCrearCalendarioOpen] = useState(false);
   const [isCrearPublicacionOpen, setIsCrearPublicacionOpen] = useState(false);
   const [fechaSeleccionada, setFechaSeleccionada] = useState<string>('');
@@ -196,21 +194,10 @@ const CalendarView: React.FC = () => {
   };
 
   // =====================================================
-  // HANDLERS DEL MODAL PUBLICACIÓN
+  // HANDLER CLICK PUBLICACIÓN
   // =====================================================
   const handlePublicacionClick = (pub: PublicacionAPI) => {
-    setSelectedPublicacion(pub);
-    setIsModalOpen(true);
-  };
-
-  const handlePublicacionUpdate = (updated: PublicacionAPI) => {
-    setPublicaciones(prev => 
-      prev.map(p => p.id === updated.id ? updated : p)
-    );
-  };
-
-  const handlePublicacionDelete = (id: number) => {
-    setPublicaciones(prev => prev.filter(p => p.id !== id));
+    navigate(`/calendar/publicacion/${pub.id}`);
   };
 
   // =====================================================
@@ -502,18 +489,6 @@ const CalendarView: React.FC = () => {
           </div>
         </>
       )}
-
-      {/* Modal de Publicación (ver/editar) */}
-      <PublicacionModal
-        publicacion={selectedPublicacion}
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setSelectedPublicacion(null);
-        }}
-        onUpdate={handlePublicacionUpdate}
-        onDelete={handlePublicacionDelete}
-      />
 
       {/* Modal Crear Calendario */}
       <CrearCalendarioModal

@@ -1,18 +1,37 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import api from '../services/api';
+import logo from '../assets/logo.webp';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isLoading, error, clearError } = useAuth();
-  
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState('');
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null);
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent' | 'error' | 'rate_limited'>('idle');
+
+  // Leer state de post-registro (viene de RegisterPage)
+  useEffect(() => {
+    const state = location.state as { registered?: boolean; email?: string } | null;
+    if (state?.registered && state?.email) {
+      setRegisteredEmail(state.email);
+      // Limpiar el state para que no se muestre al recargar
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError('');
+    setEmailNotVerified(false);
+    setResendStatus('idle');
     clearError();
 
     // Validación básica
@@ -29,8 +48,25 @@ const LoginPage: React.FC = () => {
       });
       navigate('/dashboard');
     } catch (err: any) {
-      // El error ya se maneja en el contexto, pero podemos mostrar uno local
-      setLocalError(err.message || 'Error al iniciar sesión');
+      if (err.status === 403) {
+        setRegisteredEmail(null);
+        setEmailNotVerified(true);
+        setUnverifiedEmail(email);
+      } else {
+        setLocalError(err.message || 'Error al iniciar sesión');
+      }
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendStatus('sending');
+    try {
+      await api.post('/auth/resend-verification.php', { email: unverifiedEmail });
+      setLocalError('');
+      clearError();
+      setResendStatus('sent');
+    } catch (err: any) {
+      setResendStatus(err.status === 429 ? 'rate_limited' : 'error');
     }
   };
 
@@ -42,9 +78,7 @@ const LoginPage: React.FC = () => {
       
       <div className="max-w-md w-full flex flex-col gap-10">
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="bg-primary rounded-2xl size-14 flex items-center justify-center text-white text-3xl font-bold shadow-xl shadow-primary/30">
-            <span className="material-symbols-outlined text-[32px]">layers</span>
-          </div>
+          <img src={logo} alt="SocialFlow" className="size-14 rounded-2xl bg-primary p-2 shadow-xl shadow-primary/30" />
           <div className="flex flex-col">
             <h1 className="text-white text-3xl font-black tracking-tight">Bienvenido de nuevo</h1>
             <p className="text-[#9da8b9] text-sm">Gestiona tu agencia con poder IA</p>
@@ -52,7 +86,51 @@ const LoginPage: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="bg-surface-dark border border-border-dark p-8 rounded-3xl shadow-2xl flex flex-col gap-6">
-          {displayError && (
+          {/* Banner post-registro */}
+          {registeredEmail && !emailNotVerified && (
+            <div className="bg-primary/10 border border-primary/30 px-4 py-3 rounded-xl flex items-start gap-3">
+              <span className="material-symbols-outlined text-primary text-xl mt-0.5">mark_email_read</span>
+              <p className="text-sm text-primary">
+                Te enviamos un email de verificación a <strong>{registeredEmail}</strong>. Revisá tu bandeja de entrada y la carpeta de spam.
+              </p>
+            </div>
+          )}
+
+          {/* Banner email no verificado (403) */}
+          {emailNotVerified && resendStatus !== 'sent' && (
+            <div className="bg-yellow-500/10 border border-yellow-500/30 px-4 py-3 rounded-xl flex flex-col gap-2">
+              <div className="flex items-start gap-3">
+                <span className="material-symbols-outlined text-yellow-400 text-xl mt-0.5">mark_email_unread</span>
+                <p className="text-sm text-yellow-400">
+                  {resendStatus === 'rate_limited'
+                    ? 'Demasiados intentos. Intenta en 15 minutos.'
+                    : resendStatus === 'error'
+                      ? 'Error al reenviar. Intentá de nuevo.'
+                      : 'Verificá tu email antes de iniciar sesión. Revisá tu bandeja de entrada y spam.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resendStatus === 'sending' || resendStatus === 'rate_limited'}
+                className="text-xs text-yellow-400 hover:text-yellow-300 font-bold uppercase tracking-wider self-end hover:underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+              >
+                {resendStatus === 'sending' ? 'Enviando...' : 'Reenviar email de verificación'}
+              </button>
+            </div>
+          )}
+
+          {/* Banner reenvío exitoso */}
+          {emailNotVerified && resendStatus === 'sent' && (
+            <div className="bg-green-500/10 border border-green-500/30 px-4 py-3 rounded-xl flex items-start gap-3">
+              <span className="material-symbols-outlined text-green-400 text-xl mt-0.5">mark_email_read</span>
+              <p className="text-sm text-green-400">
+                Te reenviamos el email de verificación. Revisá tu bandeja de entrada y spam.
+              </p>
+            </div>
+          )}
+
+          {displayError && !emailNotVerified && (
             <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl text-sm">
               {displayError}
             </div>
@@ -73,7 +151,7 @@ const LoginPage: React.FC = () => {
           <div className="flex flex-col gap-2">
             <div className="flex justify-between items-center">
               <label className="text-xs font-bold text-[#9da8b9] uppercase tracking-wider">Contraseña</label>
-              <a href="#" className="text-[10px] text-primary hover:underline font-bold uppercase">¿La olvidaste?</a>
+              <Link to="/forgot-password" className="text-[10px] text-primary hover:underline font-bold uppercase">¿La olvidaste?</Link>
             </div>
             <input 
               required
@@ -99,17 +177,14 @@ const LoginPage: React.FC = () => {
               'Ingresar al Panel'
             )}
           </button>
-
-          {/* Credenciales de prueba - ELIMINAR EN PRODUCCIÓN */}
-          <div className="mt-2 p-3 bg-[#111418] rounded-lg border border-border-dark">
-            <p className="text-[10px] text-[#9da8b9] uppercase tracking-wider mb-2">Credenciales de prueba:</p>
-            <p className="text-xs text-white">admin@trinity.com / password</p>
-          </div>
         </form>
 
         <p className="text-center text-sm text-[#9da8b9]">
           ¿No tienes cuenta? <Link to="/pricing" className="text-primary font-bold hover:underline">Suscríbete aquí</Link>
         </p>
+        <Link to="/" className="text-[#9da8b9] hover:text-white transition-colors flex items-center justify-center gap-2 text-sm">
+          <span className="material-symbols-outlined text-base">arrow_back</span> Volver al inicio
+        </Link>
       </div>
     </div>
   );

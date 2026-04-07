@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import logo from '../assets/logo.webp';
 
 interface MobileHeaderProps {
   onMenuToggle: () => void;
@@ -13,9 +14,7 @@ const MobileHeader: React.FC<MobileHeaderProps> = ({ onMenuToggle }) => {
     <header className="lg:hidden flex items-center justify-between px-4 py-3 bg-[#111418] border-b border-border-dark">
       {/* Logo y nombre */}
       <div className="flex items-center gap-3">
-        <div className="bg-primary/20 rounded-xl size-9 flex items-center justify-center text-primary">
-          <span className="material-symbols-outlined text-xl">layers</span>
-        </div>
+        <img src={logo} alt="SocialFlow" className="size-8 rounded-lg bg-primary p-1.5" />
         <span className="text-white font-bold text-lg">{agencyName}</span>
       </div>
 

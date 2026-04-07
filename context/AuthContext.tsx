@@ -26,6 +26,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Verificar sesión al cargar la app
   useEffect(() => {
     const checkAuth = async () => {
+      if (!localStorage.getItem('sf_token')) {
+        setIsLoading(false);
+        return;
+      }
       try {
         const currentUser = await authService.me();
         setUser(currentUser);
@@ -46,6 +50,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const loggedUser = await authService.login(credentials);
       setUser(loggedUser);
+      // Cargar datos completos (plan, límites, aprobaciones) desde me.php
+      const fullUser = await authService.me();
+      if (fullUser) setUser(fullUser);
     } catch (err: any) {
       const errorMessage = err.message || 'Error al iniciar sesión';
       setError(errorMessage);

@@ -60,6 +60,7 @@ const ClientsPage: React.FC = () => {
   const [successModal, setSuccessModal] = useState<SuccessModalState>({ isOpen: false, cliente: null });
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [formErrors, setFormErrors] = useState<Partial<FormData>>({});
+  const [modalError, setModalError] = useState<string | null>(null);
 
   // =====================================================
   // DATA FETCHING
@@ -100,6 +101,7 @@ const ClientsPage: React.FC = () => {
   const openCreateModal = () => {
     setFormData(initialFormData);
     setFormErrors({});
+    setModalError(null);
     setModal({ isOpen: true, mode: 'create', cliente: null });
   };
 
@@ -113,6 +115,7 @@ const ClientsPage: React.FC = () => {
       notas: cliente.notas || '',
     });
     setFormErrors({});
+    setModalError(null);
     setModal({ isOpen: true, mode: 'edit', cliente });
   };
 
@@ -120,6 +123,7 @@ const ClientsPage: React.FC = () => {
     setModal({ isOpen: false, mode: 'create', cliente: null });
     setFormData(initialFormData);
     setFormErrors({});
+    setModalError(null);
   };
 
   const openDeleteModal = (cliente: ClienteAPI) => {
@@ -208,7 +212,7 @@ const ClientsPage: React.FC = () => {
         fetchClientes(search);
       }
     } catch (err: any) {
-      setError(err.message || 'Error al guardar cliente');
+      setModalError(err.message || 'Error al guardar cliente');
     } finally {
       setSaving(false);
     }
@@ -517,6 +521,13 @@ const ClientsPage: React.FC = () => {
 
             {/* Modal Body */}
             <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+              {/* Error del modal */}
+              {modalError && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
+                  <span className="material-symbols-outlined text-red-500 text-lg shrink-0">error</span>
+                  <span className="text-red-500 text-sm">{modalError}</span>
+                </div>
+              )}
               {/* Nombre */}
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-medium text-[#9da8b9]">

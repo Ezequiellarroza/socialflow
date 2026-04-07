@@ -9,24 +9,23 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
   const fetchStats = async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await statsService.getAgenciaStats();
       setStats(data);
-    } catch (err: any) {
-      setError(err.message || 'Error al cargar estadísticas');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error al cargar estadísticas');
     } finally {
       setLoading(false);
     }
   };
 
-  // Obtener saludo según la hora
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Buenos días';
@@ -36,7 +35,6 @@ const Dashboard: React.FC = () => {
 
   const firstName = user?.nombre?.split(' ')[0] || 'Usuario';
 
-  // Determinar estado del cliente
   const getClienteStatus = (cliente: ClienteResumen) => {
     if (cliente.requieren_modificacion > 0) return 'urgent';
     if (cliente.pendientes > 0) return 'pending';
@@ -54,7 +52,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -66,7 +63,6 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4">
@@ -86,9 +82,7 @@ const Dashboard: React.FC = () => {
 
   const resumen = stats?.resumen;
   const clientes = stats?.clientes || [];
-  const feedbackReciente = stats?.feedback_reciente || [];
 
-  // Stats para las cards
   const statsCards = [
     { 
       label: 'Requieren Atención', 
@@ -115,7 +109,6 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Header con saludo personalizado */}
       <div className="flex flex-col">
         <h2 className="text-white text-3xl font-black leading-tight tracking-tight">
           {getGreeting()}, {firstName} 👋
@@ -125,7 +118,6 @@ const Dashboard: React.FC = () => {
         </p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {statsCards.map((stat, i) => (
           <div key={i} className="flex flex-col gap-3 rounded-xl p-5 bg-[#1a1d23] border border-border-dark hover:border-primary/30 transition-all group relative overflow-hidden">
@@ -133,7 +125,7 @@ const Dashboard: React.FC = () => {
               <span className={`material-symbols-outlined text-6xl ${stat.color}`}>{stat.icon}</span>
             </div>
             <div className="flex items-center gap-3">
-              <div className={`size-10 rounded-lg ${stat.color} bg-current/10 flex items-center justify-center`}>
+              <div className={`size-10 rounded-lg ${stat.color} flex items-center justify-center`}>
                 <span className={`material-symbols-outlined text-xl ${stat.color}`}>{stat.icon}</span>
               </div>
               <div>
@@ -146,48 +138,82 @@ const Dashboard: React.FC = () => {
         ))}
       </div>
 
-      {/* Feedback Reciente - Solo si hay */}
-      {feedbackReciente.length > 0 && (
-        <section className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-red-500">feedback</span>
-            <h2 className="text-white text-lg font-bold tracking-tight">Comentarios de Clientes</h2>
-            <span className="bg-red-500/10 text-red-500 text-xs font-bold px-2 py-0.5 rounded-full">
-              {feedbackReciente.length} nuevo{feedbackReciente.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-          
-          <div className="flex flex-col gap-2">
-            {feedbackReciente.map((feedback) => (
-              <Link 
-                key={feedback.id}
-                to={`/approvals`}
-                className="flex items-start gap-4 p-4 bg-[#1a1d23] border border-border-dark rounded-xl hover:border-red-500/30 transition-all group"
-              >
-                <div className="size-10 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-red-500">chat</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-white font-bold text-sm">{feedback.nombre_cliente}</span>
-                    <span className="text-[#5c6670] text-xs">•</span>
-                    <span className="text-[#5c6670] text-xs capitalize">{feedback.red_social}</span>
-                  </div>
-                  <p className="text-[#9da8b9] text-sm line-clamp-2">{feedback.comentario}</p>
-                  {feedback.publicacion_titulo && (
-                    <p className="text-[#5c6670] text-xs mt-1">En: {feedback.publicacion_titulo}</p>
-                  )}
-                </div>
-                <span className="material-symbols-outlined text-[#5c6670] group-hover:text-white transition-colors">
-                  arrow_forward
-                </span>
+      {user?.plan && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-white text-xl font-bold tracking-tight">Tu Plan</h2>
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/20 text-primary border border-primary/30">
+                {user.plan.charAt(0).toUpperCase() + user.plan.slice(1)}
+              </span>
+            </div>
+            {user.plan !== 'agencia' && (
+              <Link to="/pricing" className="text-sm text-primary hover:text-primary/80 transition-colors">
+                Mejorar plan →
               </Link>
-            ))}
+            )}
           </div>
-        </section>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-[#1a1d23] border border-border-dark rounded-xl p-5">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-medium text-[#9da8b9]">Clientes activos</span>
+                <span className="text-sm font-semibold text-white">
+                  {user.plan_usage?.clientes || 0}
+                  {' / '}
+                  {(user.plan_limits?.max_clientes || 0) >= 999999 ? '∞' : user.plan_limits?.max_clientes}
+                </span>
+              </div>
+              <div className="w-full bg-[#2a2d35] rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    (user.plan_limits?.max_clientes || 0) >= 999999
+                      ? 'bg-primary'
+                      : (user.plan_usage?.clientes || 0) >= (user.plan_limits?.max_clientes || 1)
+                        ? 'bg-red-500'
+                        : (user.plan_usage?.clientes || 0) / (user.plan_limits?.max_clientes || 1) > 0.8
+                          ? 'bg-yellow-500'
+                          : 'bg-primary'
+                  }`}
+                  style={{
+                    width: (user.plan_limits?.max_clientes || 0) >= 999999
+                      ? '15%'
+                      : `${Math.min(((user.plan_usage?.clientes || 0) / (user.plan_limits?.max_clientes || 1)) * 100, 100)}%`
+                  }}
+                />
+              </div>
+            </div>
+            <div className="bg-[#1a1d23] border border-border-dark rounded-xl p-5">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-medium text-[#9da8b9]">Publicaciones este mes</span>
+                <span className="text-sm font-semibold text-white">
+                  {user.plan_usage?.publicaciones_mes || 0}
+                  {' / '}
+                  {(user.plan_limits?.max_publicaciones_mes || 0) >= 999999 ? '∞' : user.plan_limits?.max_publicaciones_mes}
+                </span>
+              </div>
+              <div className="w-full bg-[#2a2d35] rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full transition-all ${
+                    (user.plan_limits?.max_publicaciones_mes || 0) >= 999999
+                      ? 'bg-primary'
+                      : (user.plan_usage?.publicaciones_mes || 0) >= (user.plan_limits?.max_publicaciones_mes || 1)
+                        ? 'bg-red-500'
+                        : (user.plan_usage?.publicaciones_mes || 0) / (user.plan_limits?.max_publicaciones_mes || 1) > 0.8
+                          ? 'bg-yellow-500'
+                          : 'bg-primary'
+                  }`}
+                  style={{
+                    width: (user.plan_limits?.max_publicaciones_mes || 0) >= 999999
+                      ? '15%'
+                      : `${Math.min(((user.plan_usage?.publicaciones_mes || 0) / (user.plan_limits?.max_publicaciones_mes || 1)) * 100, 100)}%`
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Clientes Section */}
       <section className="flex flex-col gap-5">
         <div className="flex items-center justify-between">
           <h2 className="text-white text-xl font-bold tracking-tight">Mis Clientes</h2>
@@ -265,7 +291,6 @@ const Dashboard: React.FC = () => {
               );
             })}
             
-            {/* Botón añadir cliente */}
             <Link 
               to="/clients?new=true"
               className="flex flex-col items-center justify-center min-h-45 bg-[#111418] rounded-xl border border-dashed border-[#3b4554] hover:border-primary/50 hover:bg-[#1a1d23] transition-all group"

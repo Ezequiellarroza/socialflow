@@ -25,7 +25,7 @@ export const useClientes = (): UseClientesReturn => {
     setError(null);
     try {
       const data = await clientesService.getAll();
-      setClientes(data);
+      setClientes(data.clientes);
     } catch (err: any) {
       setError(err.message || 'Error al cargar clientes');
     } finally {

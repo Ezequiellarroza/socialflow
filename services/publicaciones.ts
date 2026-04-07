@@ -4,13 +4,15 @@
 
 import api from './api';
 
-export type RedSocial = 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'tiktok';
-export type TipoContenido = 'imagen' | 'video' | 'carrusel' | 'story' | 'reel';
+export type RedSocial = 'instagram' | 'facebook' | 'tiktok';
+export type TipoContenido = 'imagen' | 'carrusel' | 'story' | 'reel' | 'portada_reel';
 export type EstadoPublicacion = 'pendiente' | 'aprobado' | 'modificar' | 'rechazado';
 
 export interface PublicacionAPI {
   id: number;
   calendario_id: number;
+  cliente_id?: number;
+  nombre_cliente?: string;
   titulo?: string;
   red_social: RedSocial;
   tipo_contenido: TipoContenido;
@@ -18,6 +20,9 @@ export interface PublicacionAPI {
   copy?: string;
   media_url?: string;
   media_type?: string;
+  portada_url?: string;
+  portada_public_id?: string;
+  media?: { id: number; media_url: string; media_type: string; media_public_id?: string; orden: number }[];
   estado: EstadoPublicacion;
   version: number;
   orden: number;
@@ -34,6 +39,8 @@ export interface CreatePublicacionData {
   copy?: string;
   media_url?: string;
   media_type?: string;
+  portada_url?: string;
+  portada_public_id?: string;
 }
 
 export interface UpdatePublicacionData {
@@ -44,6 +51,8 @@ export interface UpdatePublicacionData {
   copy?: string;
   media_url?: string;
   media_type?: string;
+  portada_url?: string;
+  portada_public_id?: string;
   estado?: EstadoPublicacion;
   orden?: number;
 }

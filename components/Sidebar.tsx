@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import logo from '../assets/logo.webp';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -16,7 +17,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
     { label: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
     { label: 'Clientes', icon: 'group', path: '/clients' },
     { label: 'Calendarios', icon: 'calendar_month', path: '/calendar' },
-    { label: 'Aprobaciones', icon: 'check_circle', path: '/approvals', badge: 3 },
+    { label: 'Aprobaciones', icon: 'check_circle', path: '/approvals', badge: (user?.pendientes_aprobacion || 0) + (user?.requieren_modificacion || 0) },
     { label: 'Configuración', icon: 'settings', path: '/settings' },
   ];
 
@@ -30,7 +31,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   };
 
   const agencyName = user?.nombre?.split(' ')[0] || 'Agencia';
-  const planName = 'Plan Pro'; // TODO: obtener del backend
+  const planName = user?.plan ? 'Plan ' + user.plan.charAt(0).toUpperCase() + user.plan.slice(1) : 'Plan Free';
+
+  const planDescription = (() => {
+    switch (user?.plan) {
+      case 'starter': return 'Ideal para agencias en crecimiento.';
+      case 'pro': return 'Acceso completo a todas las funciones.';
+      case 'agencia': return 'Plan personalizado para tu agencia.';
+      default: return 'Plan gratuito con funciones básicas.';
+    }
+  })();
 
   const handleLogout = () => {
     logout();
@@ -70,9 +80,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
             {/* Header con botón cerrar en mobile */}
             <div className="flex items-center justify-between">
               <div className="flex gap-3 items-center px-2 py-2">
-                <div className="bg-primary/20 rounded-xl size-10 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
-                  <span className="material-symbols-outlined text-2xl font-bold">layers</span>
-                </div>
+                <img src={logo} alt="SocialFlow" className="size-10 rounded-xl bg-primary p-1.5 shadow-lg shadow-primary/10" />
                 <div className="flex flex-col">
                   <h1 className="text-white text-lg font-bold leading-none tracking-tight">
                     {agencyName}
@@ -140,7 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
                 </div>
                 <span className="text-white text-sm font-bold">{planName}</span>
               </div>
-              <p className="text-[#9da8b9] text-xs mb-3">Tienes acceso a todas las funciones.</p>
+              <p className="text-[#9da8b9] text-xs mb-3">{planDescription}</p>
               <Link 
                 to="/settings?tab=facturacion"
                 onClick={handleNavClick}

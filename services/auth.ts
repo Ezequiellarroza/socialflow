@@ -6,8 +6,19 @@ import api from './api';
 import { AuthUser, LoginCredentials } from '../types';
 
 interface LoginResponse {
+  token: string;
+  refresh_token: string;
+  expires_in: number;
   user: AuthUser;
 }
+
+interface RefreshResponse {
+  token: string;
+  refresh_token: string;
+  expires_in: number;
+}
+
+const API_URL = import.meta.env.VITE_API_URL || 'https://socialflow.com.ar/api';
 
 interface MeResponse {
   user: AuthUser;
@@ -24,9 +35,14 @@ export const authService = {
       user_type: credentials.user_type || 'agencia',
     });
 
-    if (!response.data?.user) {
+    if (!response.data?.user || !response.data?.token) {
       throw { message: 'Respuesta inválida del servidor' };
     }
+
+    localStorage.setItem('sf_token', response.data.token);
+    localStorage.setItem('sf_refresh_token', response.data.refresh_token);
+    localStorage.setItem('sf_expires_in', String(response.data.expires_in || 900));
+    localStorage.setItem('sf_token_saved_at', String(Date.now()));
 
     return response.data.user;
   },
@@ -35,12 +51,10 @@ export const authService = {
    * Cerrar sesión
    */
   async logout(): Promise<void> {
-    try {
-      await api.post('/auth/logout.php', {});
-    } catch (error) {
-      // Ignorar errores de logout, limpiar estado local de todos modos
-      console.warn('Error en logout:', error);
-    }
+    localStorage.removeItem('sf_token');
+    localStorage.removeItem('sf_refresh_token');
+    localStorage.removeItem('sf_expires_in');
+    localStorage.removeItem('sf_token_saved_at');
   },
 
   /**
@@ -64,11 +78,48 @@ export const authService = {
    */
   async refresh(): Promise<boolean> {
     try {
-      await api.post('/auth/refresh.php', {});
-      return true;
+      const refreshToken = localStorage.getItem('sf_refresh_token');
+      if (!refreshToken) return false;
+
+      const response = await fetch(`${API_URL}/auth/refresh.php`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+
+      if (!response.ok) return false;
+
+      const json = await response.json();
+      const data: RefreshResponse | undefined = json.data;
+
+      if (data?.token && data?.refresh_token) {
+        localStorage.setItem('sf_token', data.token);
+        localStorage.setItem('sf_refresh_token', data.refresh_token);
+        localStorage.setItem('sf_expires_in', String(data.expires_in || 900));
+        localStorage.setItem('sf_token_saved_at', String(Date.now()));
+        return true;
+      }
+      return false;
     } catch {
+      localStorage.removeItem('sf_token');
+      localStorage.removeItem('sf_refresh_token');
+      localStorage.removeItem('sf_expires_in');
+      localStorage.removeItem('sf_token_saved_at');
       return false;
     }
+  },
+
+  getRefreshToken(): string | null {
+    return localStorage.getItem('sf_refresh_token');
+  },
+
+  isTokenExpiringSoon(): boolean {
+    const savedAt = localStorage.getItem('sf_token_saved_at');
+    const expiresIn = localStorage.getItem('sf_expires_in');
+    if (!savedAt || !expiresIn) return false;
+
+    const expiresAt = Number(savedAt) + Number(expiresIn) * 1000;
+    return Date.now() > expiresAt - 60000;
   },
 };
 

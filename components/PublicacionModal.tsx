@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  PublicacionAPI, 
-  RedSocial, 
-  TipoContenido, 
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  PublicacionAPI,
+  RedSocial,
+  TipoContenido,
   EstadoPublicacion,
-  publicacionesService 
+  publicacionesService
 } from '../services/publicaciones';
+import { uploadFile } from '../services/upload';
 
 // =====================================================
 // TYPES
@@ -26,14 +27,11 @@ interface PublicacionModalProps {
 const REDES_SOCIALES: { value: RedSocial; label: string; icon: string }[] = [
   { value: 'instagram', label: 'Instagram', icon: 'photo_camera' },
   { value: 'facebook', label: 'Facebook', icon: 'public' },
-  { value: 'twitter', label: 'Twitter/X', icon: 'tag' },
-  { value: 'linkedin', label: 'LinkedIn', icon: 'work' },
   { value: 'tiktok', label: 'TikTok', icon: 'play_circle' },
 ];
 
 const TIPOS_CONTENIDO: { value: TipoContenido; label: string }[] = [
   { value: 'imagen', label: 'Imagen' },
-  { value: 'video', label: 'Video' },
   { value: 'carrusel', label: 'Carrusel' },
   { value: 'story', label: 'Story' },
   { value: 'reel', label: 'Reel' },
@@ -75,9 +73,13 @@ const PublicacionModal: React.FC<PublicacionModalProps> = ({
   });
   
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // =====================================================
   // SYNC FORM WITH PUBLICACION
@@ -92,6 +94,9 @@ const PublicacionModal: React.FC<PublicacionModalProps> = ({
         copy: publicacion.copy || '',
         media_url: publicacion.media_url || '',
       });
+      setSelectedFile(null);
+      if (filePreview) URL.revokeObjectURL(filePreview);
+      setFilePreview(null);
       setError(null);
       setShowDeleteConfirm(false);
     }
@@ -107,28 +112,65 @@ const PublicacionModal: React.FC<PublicacionModalProps> = ({
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setSelectedFile(file);
+    if (filePreview) URL.revokeObjectURL(filePreview);
+    setFilePreview(file ? URL.createObjectURL(file) : null);
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    if (filePreview) URL.revokeObjectURL(filePreview);
+    setFilePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const handleSave = async () => {
     if (!publicacion) return;
-    
+
     setSaving(true);
     setError(null);
-    
+
     try {
-      const updated = await publicacionesService.update(publicacion.id, {
+      let mediaUrl: string | undefined = formData.media_url || undefined;
+      let mediaType: string | undefined;
+
+      // Subir archivo nuevo si se seleccionó uno
+      if (selectedFile) {
+        setUploading(true);
+        try {
+          const uploaded = await uploadFile(selectedFile);
+          mediaUrl = uploaded.url;
+          mediaType = uploaded.media_type;
+        } catch (err: any) {
+          setError(err.message || 'Error al subir archivo');
+          setSaving(false);
+          setUploading(false);
+          return;
+        }
+        setUploading(false);
+      }
+
+      const updateData: Record<string, any> = {
         titulo: formData.titulo || undefined,
         red_social: formData.red_social,
         tipo_contenido: formData.tipo_contenido,
         fecha_programada: formData.fecha_programada,
         copy: formData.copy || undefined,
-        media_url: formData.media_url || undefined,
-      });
-      
+        media_url: mediaUrl,
+      };
+      if (mediaType) updateData.media_type = mediaType;
+
+      const updated = await publicacionesService.update(publicacion.id, updateData);
+
       onUpdate(updated);
       onClose();
     } catch (err: any) {
       setError(err.message || 'Error al guardar');
     } finally {
       setSaving(false);
+      setUploading(false);
     }
   };
 
@@ -192,8 +234,6 @@ const PublicacionModal: React.FC<PublicacionModalProps> = ({
             <div className={`size-10 rounded-lg flex items-center justify-center ${
               publicacion.red_social === 'instagram' ? 'bg-linear-to-br from-purple-500 to-pink-500' :
               publicacion.red_social === 'facebook' ? 'bg-blue-600' :
-              publicacion.red_social === 'twitter' ? 'bg-sky-500' :
-              publicacion.red_social === 'linkedin' ? 'bg-blue-700' :
               'bg-gray-700'
             }`}>
               <span className="material-symbols-outlined text-white text-xl">
@@ -331,31 +371,70 @@ const PublicacionModal: React.FC<PublicacionModalProps> = ({
             />
           </div>
 
-          {/* Media URL */}
+          {/* Media Upload */}
           <div>
             <label className="block text-[#9da8b9] text-sm font-medium mb-1">
-              URL de Media
+              Archivo
             </label>
-            <input
-              type="url"
-              name="media_url"
-              value={formData.media_url}
-              onChange={handleChange}
-              placeholder="https://..."
-              className="w-full px-3 py-2 bg-surface-dark border border-border-dark rounded-lg text-white placeholder-[#9da8b9]/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-            {formData.media_url && (
-              <div className="mt-2 p-2 bg-surface-dark rounded-lg border border-border-dark">
-                <img 
-                  src={formData.media_url} 
-                  alt="Preview" 
-                  className="max-h-40 rounded mx-auto object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
-                />
+            {/* Preview: archivo nuevo seleccionado */}
+            {filePreview ? (
+              <div className="relative rounded-lg overflow-hidden border border-border-dark">
+                {selectedFile?.type.startsWith('video/') ? (
+                  <video src={filePreview} className="w-full max-h-40 object-contain bg-black" controls />
+                ) : (
+                  <img src={filePreview} alt="Preview" className="w-full max-h-40 object-contain bg-black" />
+                )}
+                <button
+                  type="button"
+                  onClick={handleRemoveFile}
+                  className="absolute top-2 right-2 size-7 flex items-center justify-center rounded-full bg-black/70 text-white hover:bg-red-500 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+                <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/70 rounded text-[10px] text-emerald-400 font-medium">
+                  Nuevo archivo
+                </div>
               </div>
+            ) : formData.media_url ? (
+              /* Preview: media existente del servidor */
+              <div className="relative rounded-lg overflow-hidden border border-border-dark">
+                {publicacion?.media_type?.startsWith('video') ? (
+                  <video src={formData.media_url} className="w-full max-h-40 object-contain bg-black" controls />
+                ) : (
+                  <img
+                    src={formData.media_url}
+                    alt="Media actual"
+                    className="w-full max-h-40 object-contain bg-black"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                )}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute bottom-2 right-2 px-2 py-1 bg-black/70 rounded text-[10px] text-white hover:bg-primary transition-colors flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-xs">swap_horiz</span>
+                  Reemplazar
+                </button>
+              </div>
+            ) : (
+              /* Sin media: botón para subir */
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-6 border-2 border-dashed border-border-dark rounded-lg text-[#9da8b9] hover:border-primary/50 hover:text-white transition-colors flex flex-col items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-2xl">cloud_upload</span>
+                <span className="text-xs">Imagen o video (máx. 120MB)</span>
+              </button>
             )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/gif,image/webp,video/mp4"
+              onChange={handleFileChange}
+              className="hidden"
+            />
           </div>
 
           {/* Info adicional */}
@@ -410,11 +489,11 @@ const PublicacionModal: React.FC<PublicacionModalProps> = ({
             </button>
             <button
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || uploading}
               className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-bold hover:bg-primary/80 transition-colors disabled:opacity-50 flex items-center gap-2"
             >
-              {saving && <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>}
-              {saving ? 'Guardando...' : 'Guardar Cambios'}
+              {(saving || uploading) && <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>}
+              {uploading ? 'Subiendo archivo...' : saving ? 'Guardando...' : 'Guardar Cambios'}
             </button>
           </div>
         </div>

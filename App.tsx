@@ -2,20 +2,26 @@ import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BrandingProvider } from './context/BrandingContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
-// Páginas públicas
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import Pricing from './pages/Pricing';
-import Checkout from './pages/Checkout';
+// Páginas públicas (lazy)
+const LandingPage = React.lazy(() => import('./pages/LandingPage'));
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const Pricing = React.lazy(() => import('./pages/Pricing'));
+const Checkout = React.lazy(() => import('./pages/Checkout'));
+const RegisterPage = React.lazy(() => import('./pages/RegisterPage'));
+const VerifyEmailPage = React.lazy(() => import('./pages/VerifyEmailPage'));
+const ForgotPasswordPage = React.lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = React.lazy(() => import('./pages/ResetPasswordPage'));
 
-// Páginas de Agencia
-import Dashboard from './pages/Dashboard';
-import ClientsPage from './pages/ClientsPage';
-import CalendarView from './pages/CalendarView';
-import ContentCreation from './pages/ContentCreation';
-import ApprovalsPage from './pages/ApprovalsPage';
-import SettingsPage from './pages/SettingsPage';
+// Páginas de Agencia (lazy)
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const ClientsPage = React.lazy(() => import('./pages/ClientsPage'));
+const CalendarView = React.lazy(() => import('./pages/CalendarView'));
+const ContentCreation = React.lazy(() => import('./pages/ContentCreation'));
+const ApprovalsPage = React.lazy(() => import('./pages/ApprovalsPage'));
+const SettingsPage = React.lazy(() => import('./pages/SettingsPage'));
+const PublicacionDetailPage = React.lazy(() => import('./pages/PublicacionDetailPage'));
 import Sidebar from './components/Sidebar';
 import MobileHeader from './components/MobileHeader';
 
@@ -184,64 +190,78 @@ const AppRoutes: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
 
   return (
-    <Routes>
-      {/* Rutas Públicas */}
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/pricing" element={<Pricing />} />
-      <Route path="/checkout" element={<Checkout />} />
-      
-      {/* Login Agencia */}
-      <Route 
-        path="/login" 
-        element={
-          isAuthenticated && user?.user_type === 'agencia' 
-            ? <Navigate to="/dashboard" replace /> 
-            : <LoginPage />
-        } 
-      />
+    <React.Suspense fallback={
+      <div className="min-h-screen bg-background-dark flex items-center justify-center">
+        <div className="flex items-center gap-3 text-[#9da8b9]">
+          <span className="animate-spin material-symbols-outlined">sync</span>
+          <span>Cargando...</span>
+        </div>
+      </div>
+    }>
+      <Routes>
+        {/* Rutas Públicas */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      {/* Login Cliente */}
-      <Route 
-        path="/cliente/login" 
-        element={
-          isAuthenticated && user?.user_type === 'cliente' 
-            ? <Navigate to="/cliente/dashboard" replace /> 
-            : <ClienteLoginPage />
-        } 
-      />
+        {/* Login Agencia */}
+        <Route
+          path="/login"
+          element={
+            isAuthenticated && user?.user_type === 'agencia'
+              ? <Navigate to="/dashboard" replace />
+              : <LoginPage />
+          }
+        />
 
-      {/* ========== RUTAS DE AGENCIA ========== */}
-      <Route path="/dashboard" element={<AgenciaRoute><Dashboard /></AgenciaRoute>} />
-      <Route path="/clients" element={<AgenciaRoute><ClientsPage /></AgenciaRoute>} />
-      <Route path="/calendar" element={<AgenciaRoute><CalendarView /></AgenciaRoute>} />
-      <Route path="/create" element={<AgenciaRoute><ContentCreation /></AgenciaRoute>} />
-      <Route path="/approvals" element={<AgenciaRoute><ApprovalsPage /></AgenciaRoute>} />
-      <Route path="/settings" element={<AgenciaRoute><SettingsPage /></AgenciaRoute>} />
+        {/* Login Cliente */}
+        <Route
+          path="/cliente/login"
+          element={
+            isAuthenticated && user?.user_type === 'cliente'
+              ? <Navigate to="/cliente/dashboard" replace />
+              : <ClienteLoginPage />
+          }
+        />
 
-      {/* ========== RUTAS DE CLIENTE (legacy) ========== */}
-      <Route path="/cliente/dashboard" element={<ClienteRoute><ClienteDashboard /></ClienteRoute>} />
+        {/* ========== RUTAS DE AGENCIA ========== */}
+        <Route path="/dashboard" element={<AgenciaRoute><Dashboard /></AgenciaRoute>} />
+        <Route path="/clients" element={<AgenciaRoute><ClientsPage /></AgenciaRoute>} />
+        <Route path="/calendar" element={<AgenciaRoute><CalendarView /></AgenciaRoute>} />
+        <Route path="/calendar/publicacion/:id" element={<AgenciaRoute><PublicacionDetailPage /></AgenciaRoute>} />
+        <Route path="/create" element={<AgenciaRoute><ContentCreation /></AgenciaRoute>} />
+        <Route path="/approvals" element={<AgenciaRoute><ApprovalsPage /></AgenciaRoute>} />
+        <Route path="/settings" element={<AgenciaRoute><SettingsPage /></AgenciaRoute>} />
 
-      {/* ========== PORTAL MARCA BLANCA ========== */}
-      <Route path="/portal/:slug/login" element={<PortalLoginWrapper />} />
-      <Route path="/portal/:slug/dashboard" element={<PortalRoute><ClienteDashboard /></PortalRoute>} />
-      <Route path="/portal/:slug" element={<PortalRedirect />} />
+        {/* ========== RUTAS DE CLIENTE (legacy) ========== */}
+        <Route path="/cliente/dashboard" element={<ClienteRoute><ClienteDashboard /></ClienteRoute>} />
 
-      {/* ========== RUTAS DE SUPER ADMIN ========== */}
-      <Route 
-        path="/admin/login" 
-        element={
-          isAuthenticated && user?.user_type === 'super_admin'
-            ? <Navigate to="/admin/dashboard" replace />
-            : <AdminLoginPage />
-        } 
-      />
-      <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-      <Route path="/admin/agencias" element={<AdminRoute><AdminAgencias /></AdminRoute>} />
-      <Route path="/admin/pagos" element={<AdminRoute><AdminPagos /></AdminRoute>} />
+        {/* ========== PORTAL MARCA BLANCA ========== */}
+        <Route path="/portal/:slug/login" element={<PortalLoginWrapper />} />
+        <Route path="/portal/:slug/dashboard" element={<PortalRoute><ClienteDashboard /></PortalRoute>} />
+        <Route path="/portal/:slug" element={<PortalRedirect />} />
 
-      {/* Catch-all */}
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        {/* ========== RUTAS DE SUPER ADMIN ========== */}
+        <Route
+          path="/admin/login"
+          element={
+            isAuthenticated && user?.user_type === 'super_admin'
+              ? <Navigate to="/admin/dashboard" replace />
+              : <AdminLoginPage />
+          }
+        />
+        <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+        <Route path="/admin/agencias" element={<AdminRoute><AdminAgencias /></AdminRoute>} />
+        <Route path="/admin/pagos" element={<AdminRoute><AdminPagos /></AdminRoute>} />
+
+        {/* Catch-all */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </React.Suspense>
   );
 };
 
@@ -250,7 +270,9 @@ const App: React.FC = () => {
     <AuthProvider>
       <BrandingProvider>
         <Router>
-          <AppRoutes />
+          <ErrorBoundary>
+            <AppRoutes />
+          </ErrorBoundary>
         </Router>
       </BrandingProvider>
     </AuthProvider>

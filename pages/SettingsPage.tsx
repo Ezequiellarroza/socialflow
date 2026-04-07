@@ -51,7 +51,7 @@ const SettingsPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <p className="text-white font-bold text-lg">Agencia Creative Pro</p>
+                    <p className="text-white font-bold text-lg">SocialFlow</p>
                     <p className="text-[#9da8b9] text-xs">Tamaño: 5-10 empleados • Creado Oct 2023</p>
                   </div>
                 </div>
@@ -59,7 +59,7 @@ const SettingsPage: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-[#9da8b9] uppercase tracking-wider">Nombre de la Agencia</label>
-                    <input className="h-12 bg-[#111418] border border-border-dark rounded-xl px-4 text-white text-sm focus:ring-primary" defaultValue="Agencia Creative Pro" />
+                    <input className="h-12 bg-[#111418] border border-border-dark rounded-xl px-4 text-white text-sm focus:ring-primary" defaultValue="SocialFlow" />
                   </div>
                   <div className="flex flex-col gap-2">
                     <label className="text-xs font-bold text-[#9da8b9] uppercase tracking-wider">Email Principal</label>

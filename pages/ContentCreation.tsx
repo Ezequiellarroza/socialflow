@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { generateCaption, suggestHashtags } from '../geminiService';
 import { clientesService, ClienteAPI } from '../services/clientes';
 import { calendariosService, CalendarioAPI } from '../services/calendarios';
-import { 
-  publicacionesService, 
-  RedSocial, 
+import {
+  publicacionesService,
+  RedSocial,
   TipoContenido,
-  CreatePublicacionData 
+  CreatePublicacionData
 } from '../services/publicaciones';
+import { uploadFile } from '../services/upload';
 
 // =====================================================
 // CONSTANTS
@@ -16,14 +17,11 @@ import {
 const REDES_SOCIALES: { value: RedSocial; label: string; icon: string }[] = [
   { value: 'instagram', label: 'Instagram', icon: 'photo_camera' },
   { value: 'facebook', label: 'Facebook', icon: 'public' },
-  { value: 'twitter', label: 'Twitter/X', icon: 'tag' },
-  { value: 'linkedin', label: 'LinkedIn', icon: 'work' },
   { value: 'tiktok', label: 'TikTok', icon: 'play_circle' },
 ];
 
 const TIPOS_CONTENIDO: { value: TipoContenido; label: string; icon: string }[] = [
   { value: 'imagen', label: 'Imagen', icon: 'image' },
-  { value: 'video', label: 'Video', icon: 'videocam' },
   { value: 'carrusel', label: 'Carrusel', icon: 'view_carousel' },
   { value: 'story', label: 'Story', icon: 'amp_stories' },
   { value: 'reel', label: 'Reel', icon: 'movie' },
@@ -52,12 +50,15 @@ const ContentCreation: React.FC = () => {
   const [titulo, setTitulo] = useState('');
   const [copy, setCopy] = useState('');
   const [hashtags, setHashtags] = useState('');
-  const [mediaUrl, setMediaUrl] = useState('');
-  
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // UI state
   const [loading, setLoading] = useState(true);
   const [loadingCalendarios, setLoadingCalendarios] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -173,6 +174,25 @@ const ContentCreation: React.FC = () => {
     setSuccess(null);
 
     try {
+      let mediaUrl: string | undefined;
+      let mediaType: string | undefined;
+
+      // Subir archivo si hay uno seleccionado
+      if (selectedFile) {
+        setUploading(true);
+        try {
+          const uploaded = await uploadFile(selectedFile);
+          mediaUrl = uploaded.url;
+          mediaType = uploaded.media_type;
+        } catch (err: any) {
+          setError(err.message || 'Error al subir archivo');
+          setSaving(false);
+          setUploading(false);
+          return;
+        }
+        setUploading(false);
+      }
+
       const data: CreatePublicacionData = {
         calendario_id: selectedCalendarioId,
         titulo: titulo || undefined,
@@ -180,24 +200,29 @@ const ContentCreation: React.FC = () => {
         tipo_contenido: tipoContenido,
         fecha_programada: fechaProgramada,
         copy: copy ? `${copy}${hashtags ? '\n\n' + hashtags : ''}` : undefined,
-        media_url: mediaUrl || undefined,
+        media_url: mediaUrl,
+        media_type: mediaType,
       };
 
       await publicacionesService.create(data);
-      
+
       setSuccess('¡Publicación creada exitosamente!');
-      
+
       // Limpiar formulario
       setTitulo('');
       setCopy('');
       setHashtags('');
-      setMediaUrl('');
+      setSelectedFile(null);
+      if (filePreview) URL.revokeObjectURL(filePreview);
+      setFilePreview(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       setFechaProgramada('');
-      
+
     } catch (err: any) {
       setError(err.message || 'Error al guardar publicación');
     } finally {
       setSaving(false);
+      setUploading(false);
     }
   };
 
@@ -422,35 +447,65 @@ const ContentCreation: React.FC = () => {
           )}
         </div>
 
-        {/* Media URL */}
+        {/* Media Upload */}
         <div className="p-6 rounded-xl bg-surface-dark border border-border-dark flex flex-col gap-4">
           <h3 className="text-white text-xl font-bold leading-tight flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">image</span> Media
           </h3>
-          <label className="flex flex-col gap-2">
-            <p className="text-white text-sm font-medium">URL de la imagen o video</p>
-            <input 
-              type="url"
-              value={mediaUrl}
-              onChange={(e) => setMediaUrl(e.target.value)}
-              className="w-full rounded-lg border border-[#3b4554] bg-[#111418] text-white px-4 h-12 focus:ring-primary focus:outline-none"
-              placeholder="https://..."
-            />
-            <p className="text-[#9da8b9] text-xs">
-              Tip: Puedes subir imágenes a Cloudinary o similar y pegar la URL aquí.
-            </p>
-          </label>
+          {filePreview ? (
+            <div className="relative rounded-xl overflow-hidden border border-border-dark">
+              {selectedFile?.type.startsWith('video/') ? (
+                <video src={filePreview} className="w-full max-h-64 object-contain bg-black" controls />
+              ) : (
+                <img src={filePreview} alt="Preview" className="w-full max-h-64 object-contain bg-black" />
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedFile(null);
+                  if (filePreview) URL.revokeObjectURL(filePreview);
+                  setFilePreview(null);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+                className="absolute top-3 right-3 size-8 flex items-center justify-center rounded-full bg-black/70 text-white hover:bg-red-500 transition-colors"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-10 border-2 border-dashed border-border-dark rounded-xl text-[#9da8b9] hover:border-primary/50 hover:text-white transition-colors flex flex-col items-center gap-3"
+            >
+              <span className="material-symbols-outlined text-4xl">cloud_upload</span>
+              <span className="text-sm font-medium">Seleccionar imagen o video</span>
+              <span className="text-xs text-[#9da8b9]/70">JPG, PNG, GIF, WebP o MP4 (máx. 120MB)</span>
+            </button>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp,video/mp4"
+            onChange={(e) => {
+              const file = e.target.files?.[0] || null;
+              setSelectedFile(file);
+              if (filePreview) URL.revokeObjectURL(filePreview);
+              setFilePreview(file ? URL.createObjectURL(file) : null);
+            }}
+            className="hidden"
+          />
         </div>
 
         {/* Actions */}
         <div className="flex items-center gap-4">
           <button
             onClick={handleSave}
-            disabled={saving || !selectedCalendarioId}
+            disabled={saving || uploading || !selectedCalendarioId}
             className="flex-1 h-12 bg-primary text-white rounded-xl font-bold transition-all hover:bg-primary/80 disabled:opacity-50 flex items-center justify-center gap-2"
           >
-            {saving && <span className="material-symbols-outlined animate-spin">progress_activity</span>}
-            {saving ? 'Guardando...' : 'Guardar Publicación'}
+            {(saving || uploading) && <span className="material-symbols-outlined animate-spin">progress_activity</span>}
+            {uploading ? 'Subiendo archivo...' : saving ? 'Guardando...' : 'Guardar Publicación'}
           </button>
         </div>
       </div>
@@ -483,18 +538,15 @@ const ContentCreation: React.FC = () => {
               </div>
               {/* Media preview */}
               <div className="aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
-                {mediaUrl ? (
-                  <img 
-                    src={mediaUrl} 
-                    alt="Preview" 
-                    className="size-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
+                {filePreview ? (
+                  selectedFile?.type.startsWith('video/') ? (
+                    <video src={filePreview} className="size-full object-cover" muted />
+                  ) : (
+                    <img src={filePreview} alt="Preview" className="size-full object-cover" />
+                  )
                 ) : (
                   <span className="material-symbols-outlined text-6xl text-slate-300">
-                    {tipoContenido === 'video' || tipoContenido === 'reel' ? 'videocam' : 'image'}
+                    {tipoContenido === 'reel' ? 'videocam' : 'image'}
                   </span>
                 )}
               </div>
